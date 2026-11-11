@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en-CA">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>From Reflection to Action: Praxis in Climate Education — EDCI 487</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    /* ============================================================
+       EDCI 487 · shared look
+       SHARED: everything down to "END SHARED" (and the whole <script>)
+       must stay identical on every page. Check: bash tools/check-shared.sh
+       A11Y: comments mark accessibility changes to the original design
+       ============================================================ */
+    :root {
+      --forest:     #2d5a3f;
+      --forest-2:   #2f4a2f;   /* sidebar */
+      --near-black: #1c1a14;
+      --moss:       #4a6741;
+      --moss-deep:  #3d5a35;
+      --sage:       #7a9e6e;   /* decorative only on dark green */
+      --sage-light: #b8d1ab;   /* A11Y: sage text on forest (4.8:1) */
+      --sage-pale:  #deebd4;
+      --clay:       #c4622d;   /* decorative only (bars, dots) */
+      --clay-deep:  #a64d1f;   /* A11Y: CTA + clay text on light (5.5:1) */
+      --clay-ink:   #8a3f17;   /* A11Y: CTA hover (darkens instead of lightening) */
+      --ember:      #e8874a;
+      --ember-light:#f6bb92;   /* A11Y: ember text on forest (4.7:1) */
+      --sand:       #e8d5b0;
+      --cream:      #f5f0e8;
+      --white:      #fefcf8;
+      --ink-soft:   #465543;   /* A11Y: replaces rgba(26,46,26,.4–.6) body text (7:1) */
+      --on-dark:    #d7dacf;   /* A11Y: replaces rgba(245,240,232,.25–.6) on forest (5.6:1) */
+      --ink-warm:   #3a3a2c;   /* body text on sand (9:1) */
+      --ink-green:  #2c3a2a;   /* body text on sage-pale (10:1) */
+      --on-clay:    #fff4ec;   /* small text on clay-deep (5.2:1) */
+      --clay-wash:  #fbeee4;   /* highlighted slide line */
+      --field-line: #6c7a68;   /* form field borders (3:1+ on cream) */
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    @media (prefers-reduced-motion: no-preference) { html:not(.pref-calm) { scroll-behavior: smooth; } }
+    html.pref-large { font-size: 118.75%; }
+    /* UDL: dyslexia-friendly font (Lexend), no italics, a little more letter, word and line spacing */
+    html.pref-dyslexia body, html.pref-dyslexia body * { font-family: 'Lexend', 'DM Sans', system-ui, sans-serif !important; font-style: normal !important; }
+    html.pref-dyslexia body { letter-spacing: 0.02em; word-spacing: 0.12em; }
+    html.pref-dyslexia p, html.pref-dyslexia li, html.pref-dyslexia label { line-height: 1.9 !important; }
+    body { font-family: 'DM Sans', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif; font-weight: 400; overflow-x: hidden; min-height: 100vh; line-height: 1.6; }
+    a { color: var(--clay-deep); text-underline-offset: 3px; }
+    strong { font-weight: 600; }
+
+    /* A11Y: visible focus, skip link, screen-reader-only text */
+    :focus-visible { outline: 3px solid var(--clay-deep); outline-offset: 3px; border-radius: 2px; }
+    .on-dark :focus-visible, .sidebar :focus-visible, .sidebar-toggle:focus-visible { outline-color: var(--sand); }
+    .skip-link { position: absolute; left: 1rem; top: -100px; z-index: 10000; background: var(--white); color: var(--near-black); padding: 0.75rem 1.25rem; border-radius: 6px; font-weight: 600; text-decoration: none; }
+    .skip-link:focus { top: 1rem; }
+    .sr-only { position: absolute !important; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+    /* HAMBURGER TOGGLE — A11Y: 48px target, labelled, aria-expanded */
+    .sidebar-toggle { position: fixed; top: 1rem; left: 1rem; z-index: 200; width: 48px; height: 48px; background: rgba(47,74,47,0.95); border: 1px solid rgba(122,158,110,0.4); border-radius: 8px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; padding: 0; }
+    .sidebar-toggle:hover { background: var(--forest-2); }
+    .sidebar-toggle .bar { display: block; width: 18px; height: 2px; background: var(--cream); border-radius: 1px; transition: transform 0.3s ease, opacity 0.3s ease; }
+    .sidebar-toggle[aria-expanded="true"] .bar:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .sidebar-toggle[aria-expanded="true"] .bar:nth-child(2) { opacity: 0; }
+    .sidebar-toggle[aria-expanded="true"] .bar:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+    .sidebar-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 140; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+    .sidebar-overlay.visible { opacity: 1; pointer-events: auto; }
+
+    /* SIDEBAR — A11Y: hidden + inert when closed so keyboard users don't tab into it */
+    .sidebar { position: fixed; top: 0; left: 0; width: 280px; height: 100vh; background: var(--forest-2); border-right: 1px solid rgba(122,158,110,0.2); z-index: 150; display: flex; flex-direction: column; padding: 5rem 0 1.5rem; overflow-y: auto; transform: translateX(-100%); visibility: hidden; transition: transform 0.3s ease, visibility 0s 0.3s; }
+    .sidebar.open { transform: translateX(0); visibility: visible; transition: transform 0.3s ease; }
+    .sidebar-logo { font-size: 0.75rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--on-dark); padding: 0 1rem 1.25rem 2rem; border-bottom: 1px solid rgba(122,158,110,0.2); margin-bottom: 1rem; line-height: 1.7; }
+    .sidebar-logo .module-name { display: block; color: var(--sand); letter-spacing: 0.08em; margin-top: 0.25rem; }
+    .sidebar-nav ol { list-style: none; }
+    .nav-item { display: flex; align-items: baseline; gap: 0.5rem; min-height: 44px; padding: 0.7rem 1rem 0.7rem 2rem; position: relative; text-decoration: none; color: var(--on-dark); }
+    .nav-item:hover { background: rgba(245,240,232,0.06); color: var(--cream); }
+    .nav-item[aria-current="page"]::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--ember); }
+    .nav-num { font-size: 0.75rem; font-weight: 600; width: 1.6rem; flex-shrink: 0; }
+    .nav-item[aria-current="page"] .nav-num { color: var(--ember-light); }
+    .nav-label { font-size: 0.875rem; line-height: 1.45; flex: 1; min-width: 0; }
+    .nav-item[aria-current="page"] .nav-label { color: var(--cream); font-weight: 600; }
+    .nav-time { font-size: 0.75rem; white-space: nowrap; }
+    .nav-check { width: 1.1rem; height: 1.1rem; flex-shrink: 0; align-self: center; border-radius: 50%; border: 1.5px solid rgba(215,218,207,0.6); display: inline-grid; place-items: center; font-size: 0.68rem; }
+    .nav-item.is-done .nav-check { background: var(--sage-light); border-color: var(--sage-light); color: var(--forest-2); }
+    .display-options { margin-top: auto; padding: 1.25rem 1.25rem 0 2rem; border-top: 1px solid rgba(122,158,110,0.2); }
+    .display-options h2 { font: 600 0.75rem 'DM Sans', sans-serif; letter-spacing: 0.14em; text-transform: uppercase; color: var(--on-dark); margin-bottom: 0.6rem; }
+    .pref-btn { display: flex; width: 100%; justify-content: space-between; align-items: center; min-height: 44px; margin-bottom: 0.4rem; padding: 0.5rem 0.75rem; background: transparent; color: var(--cream); border: 1px solid rgba(215,218,207,0.45); border-radius: 6px; font: 400 0.85rem 'DM Sans', sans-serif; cursor: pointer; text-align: left; }
+    .pref-btn .state { font-size: 0.75rem; color: var(--on-dark); }
+    .pref-btn[aria-pressed="true"] { background: rgba(232,213,176,0.15); border-color: var(--sand); }
+
+    /* LINE TRACKER — "Your slide" progress (UDL: self-monitoring) */
+    .tracker-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; }
+    .tracker { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; list-style: none; }
+    .tracker-label { font-size: 0.8rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--moss-deep); margin-right: 0.25rem; }
+    .tracker li { display: inline-flex; align-items: center; gap: 0.45rem; font-size: 0.9rem; color: var(--ink-soft); }
+    .tracker .dot { width: 1.25rem; height: 1.25rem; border-radius: 50%; border: 2px solid var(--moss); display: inline-grid; place-items: center; font-size: 0.72rem; font-weight: 700; color: var(--white); }
+    .tracker li.is-done .dot { background: var(--moss-deep); border-color: var(--moss-deep); }
+    .tracker li.is-current { color: var(--near-black); font-weight: 600; }
+    .tracker li.is-current .dot { border-color: var(--clay-deep); border-width: 3px; }
+
+    /* THE SLIDE — the artifact the whole module revises */
+    .slide { background: var(--white); border-radius: 14px; box-shadow: 0 12px 40px rgba(26,46,26,0.14); border-top: 8px solid var(--clay); overflow: hidden; max-width: 760px; }
+    .slide-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1.25rem 2rem; border-bottom: 1px solid rgba(74,103,65,0.15); }
+    .slide-title { font-family: 'Playfair Display', Georgia, serif; font-size: 1.5rem; font-weight: 700; color: var(--forest); }
+    .slide-tag { font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-soft); }
+    .slide-lines { list-style: none; counter-reset: line; padding: 0.5rem 0; }
+    .slide-line { counter-increment: line; display: grid; grid-template-columns: 2.5rem 1fr; gap: 0.75rem; padding: 1rem 2rem; border-bottom: 1px dashed rgba(74,103,65,0.18); }
+    .slide-line:last-child { border-bottom: 0; }
+    .slide-line::before { content: counter(line); font-family: 'Playfair Display', Georgia, serif; font-size: 1.6rem; font-weight: 900; color: var(--clay-deep); line-height: 1.1; }
+    .slide-q { display: block; font-size: 0.8rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--moss-deep); margin-bottom: 0.15rem; }
+    .slide-a { font-size: 1.05rem; line-height: 1.6; color: var(--near-black); }
+    .slide-line.is-focus { background: var(--clay-wash); }
+
+    /* CHOICE ACTIVITIES (predict, gut check) */
+    .choice-set { border: 0; }
+    .choice-set legend { font-size: 1.05rem; font-weight: 600; color: var(--near-black); margin-bottom: 0.9rem; line-height: 1.5; }
+    .choice { display: flex; gap: 0.75rem; align-items: flex-start; background: rgba(254,252,248,0.9); border: 1.5px solid rgba(74,103,65,0.3); border-radius: 10px; padding: 0.85rem 1rem; margin-bottom: 0.6rem; cursor: pointer; line-height: 1.6; color: var(--near-black); }
+    .choice:hover { border-color: var(--moss); }
+    .choice input { margin-top: 0.3rem; width: 1.15rem; height: 1.15rem; accent-color: var(--moss-deep); flex-shrink: 0; }
+    .choice:has(input:checked) { border-color: var(--moss-deep); background: var(--white); box-shadow: 0 0 0 1px var(--moss-deep); }
+    .btn-check { display: inline-flex; align-items: center; min-height: 44px; padding: 0.6rem 1.4rem; margin-top: 0.4rem; background: var(--forest); color: var(--cream); border: 0; border-radius: 6px; font: 600 0.9rem 'DM Sans', sans-serif; cursor: pointer; }
+    .btn-check:hover { background: var(--moss-deep); }
+    .btn-ghost { background: transparent; color: var(--near-black); border: 1.5px solid var(--near-black); }
+    .btn-ghost:hover { background: var(--near-black); color: var(--cream); }
+    .feedback { margin-top: 0.9rem; background: var(--white); border-left: 4px solid var(--moss); border-radius: 0 8px 8px 0; padding: 0.9rem 1.1rem; line-height: 1.75; color: var(--near-black); }
+    /* A11Y: keep the live region rendered when empty; display:none regions can be missed by VoiceOver */
+    .feedback:empty { padding: 0; margin: 0; border: 0; }
+    .feedback .verdict { display: block; font-weight: 700; margin-bottom: 0.2rem; }
+    .feedback.is-nudge { border-left-color: var(--clay-deep); }
+
+    /* SCROLL REVEAL — A11Y: only hides content when JS runs AND motion is allowed */
+    html.js-reveal .reveal { opacity: 0; transform: translateY(20px); transition: opacity 0.55s ease, transform 0.55s ease; }
+    html.js-reveal .reveal.visible { opacity: 1; transform: none; }
+
+    /* CTA — A11Y: solid --clay-deep (5.5:1); hover darkens */
+    .btn-begin { display: inline-flex; align-items: center; gap: 1rem; min-height: 48px; background: var(--clay-deep); color: var(--white); font: 600 0.88rem 'DM Sans', sans-serif; letter-spacing: 0.08em; text-transform: uppercase; text-decoration: none; padding: 1rem 2rem; border-radius: 4px; transition: background 0.2s; }
+    .btn-begin:hover, .btn-begin:focus-visible { background: var(--clay-ink); color: var(--white); }
+    .btn-begin .arrow { width: 20px; height: 2px; background: currentColor; position: relative; }
+    .btn-begin .arrow::after { content: ''; position: absolute; right: 0; top: -3px; width: 7px; height: 7px; border-right: 2px solid currentColor; border-top: 2px solid currentColor; transform: rotate(45deg); }
+    .begin-section { background: var(--cream); padding: 4rem 3rem; }
+    .begin-row { display: flex; justify-content: space-between; align-items: center; gap: 3rem; flex-wrap: wrap; width: min(1080px, 100%); margin: 0 auto; }
+    .begin-heading { font-family: 'Playfair Display', Georgia, serif; font-size: 2rem; color: var(--forest); font-weight: 700; margin-bottom: 0.6rem; }
+    .begin-sub { font-size: 1rem; line-height: 1.75; color: var(--ink-soft); max-width: 520px; }
+    .begin-action { display: flex; flex-direction: column; align-items: flex-end; gap: 0.75rem; }
+    .time-note { font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); }
+
+    .site-footer { background: var(--forest-2); color: var(--on-dark); padding: 1.5rem 3rem; font-size: 0.85rem; line-height: 1.7; }
+    .site-footer a { color: var(--sand); }
+
+    /* A11Y: OS reduced motion + learner "calm mode" */
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; } }
+    html.pref-calm *, html.pref-calm *::before, html.pref-calm *::after { animation: none !important; transition: none !important; }
+    html.pref-calm body::before, html.pref-calm body::after { display: none; }
+    /* ===== END SHARED ===== */
+
+    /* ===== INTRO PAGE ===== */
+    body { background: var(--forest); color: var(--cream); }
+    body::before { content: ''; position: fixed; inset: 0; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E"); pointer-events: none; z-index: 100; opacity: 0.6; }
+
+    .hero { min-height: 100vh; min-height: 100svh; display: grid; grid-template-rows: auto 1fr auto; position: relative; overflow: hidden; }
+    .hero-bg { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+    .ring { position: absolute; border-radius: 50%; border: 1px solid rgba(122,158,110,0.14); }
+    .ring:nth-child(1) { width: 300px; height: 300px; top: 10%; left: 60%; }
+    .ring:nth-child(2) { width: 500px; height: 500px; top: 5%;  left: 55%; }
+    .ring:nth-child(3) { width: 700px; height: 700px; top: -2%; left: 50%; }
+    .ring:nth-child(4) { width: 900px; height: 900px; top: -8%; left: 45%; }
+    /* A11Y (WCAG 2.2.2): rings now ease in once (< 5 s) instead of looping forever */
+    @media (prefers-reduced-motion: no-preference) {
+      html:not(.pref-calm) .ring { animation: ringIn 3.5s ease-out both; }
+      html:not(.pref-calm) .ring:nth-child(2) { animation-delay: .3s; }
+      html:not(.pref-calm) .ring:nth-child(3) { animation-delay: .6s; }
+      html:not(.pref-calm) .ring:nth-child(4) { animation-delay: .9s; }
+      html:not(.pref-calm) .hero-content > *, html:not(.pref-calm) .hero-stats { animation: fadeUp .8s ease both; }
+      html:not(.pref-calm) .hero-content > :nth-child(2) { animation-delay: .15s; }
+      html:not(.pref-calm) .hero-content > :nth-child(3) { animation-delay: .3s; }
+      html:not(.pref-calm) .hero-content > :nth-child(4) { animation-delay: .45s; }
+      html:not(.pref-calm) .hero-stats { animation-delay: .6s; }
+    }
+    @keyframes ringIn { from { opacity: 0; transform: scale(.85); } to { opacity: 1; transform: none; } }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: none; } }
+    .hero-slash { position: absolute; top: 0; right: 0; width: 45%; height: 100%; background: linear-gradient(135deg, transparent 40%, rgba(74,103,65,0.15) 40%); pointer-events: none; }
+
+    .top-nav { position: relative; z-index: 10; display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; padding: 2rem 3.5rem 2rem 5.5rem; border-bottom: 1px solid rgba(122,158,110,0.25); }
+    .nav-course { font-size: 0.78rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--sage-light); }
+    .nav-week { display: flex; align-items: center; gap: 1rem; font-size: 0.78rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--on-dark); }
+    .nav-week::before { content: ''; width: 28px; height: 2px; background: var(--clay); }
+
+    .hero-content { position: relative; z-index: 10; display: flex; flex-direction: column; justify-content: center; padding: 4rem 3.5rem 2rem; max-width: 920px; }
+    .week-label { font-size: 1rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ember-light); margin-bottom: 1.5rem; font-weight: 500; }
+    .hero-title { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(2.8rem, 7vw, 6.5rem); font-weight: 900; line-height: 0.98; letter-spacing: -0.02em; margin-bottom: 0.3em; }
+    .hero-title .line-1 { color: var(--white); display: block; }
+    /* A11Y: outlined text replaced with solid light sage (outlines have no measurable contrast) */
+    .hero-title .line-2 { color: var(--sage-light); display: block; }
+    .hero-subtitle { font-family: 'Playfair Display', Georgia, serif; font-style: italic; font-size: clamp(1.15rem, 2.5vw, 1.6rem); color: var(--ember-light); margin-bottom: 1.5rem; }
+    .hero-desc { font-size: 1.05rem; line-height: 1.8; color: var(--on-dark); max-width: 60ch; }
+
+    /* STATS BAR — A11Y: deeper clay so white labels pass (5.5:1) */
+    .hero-stats { display: flex; position: relative; z-index: 10; background: var(--clay-deep); }
+    .stat { flex: 1; padding: 1.2rem 3.5rem; border-right: 1px solid rgba(255,255,255,0.25); display: flex; flex-direction: column-reverse; gap: 0.25rem; }
+    .stat:last-child { border-right: none; }
+    .stat dd { font-family: 'Playfair Display', Georgia, serif; font-size: 2rem; font-weight: 700; color: var(--white); line-height: 1; }
+    .stat dt { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--on-clay); }
+
+    .unit-framing { background: var(--forest); padding: 4rem 3.5rem; }
+    .unit-framing-inner { max-width: 1200px; margin: 0 auto; }
+    .unit-eyebrow { font-size: 0.78rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ember-light); margin-bottom: 1rem; font-weight: 500; }
+    .unit-q { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(1.2rem, 2.5vw, 1.7rem); font-style: italic; color: var(--cream); line-height: 1.5; margin-bottom: 1.5rem; max-width: 60ch; }
+    .unit-desc { font-size: 1rem; line-height: 1.85; color: var(--on-dark); }
+
+    .overview { background: var(--cream); color: var(--near-black); padding: 5rem 3.5rem; }
+    .overview-inner { display: grid; grid-template-columns: 1fr 1.4fr; gap: 5rem; max-width: 1200px; margin: 0 auto; }
+    .section-label { font-size: 0.78rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--moss-deep); margin-bottom: 0.75rem; font-weight: 600; }
+    .overview-heading { font-family: 'Playfair Display', Georgia, serif; font-size: 2rem; font-weight: 700; color: var(--forest); line-height: 1.25; }
+    .overview-lead { font-size: 1rem; line-height: 1.8; color: var(--ink-soft); margin-top: 1rem; }
+    .overview-body { font-size: 1rem; line-height: 1.85; color: var(--ink-soft); margin-bottom: 2rem; }
+    .lo-intro { font-size: 0.9rem; font-weight: 600; letter-spacing: 0.04em; color: var(--moss-deep); margin-bottom: 1rem; }
+    .outcomes-grid { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .outcome-card { background: var(--white); border: 1px solid rgba(74,103,65,0.15); border-radius: 12px; padding: 1.4rem; }
+    .outcome-number { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--clay-deep); margin-bottom: 0.5rem; }
+    .outcome-icon { font-size: 1.4rem; margin-bottom: 0.5rem; display: block; }
+    .outcome-title { font-family: 'Playfair Display', Georgia, serif; font-size: 1.05rem; font-weight: 700; color: var(--forest); margin-bottom: 0.35rem; }
+    .outcome-body { font-size: 0.92rem; line-height: 1.65; color: var(--ink-soft); }
+
+    /* THE LESSON YOU'LL FIX (sand) */
+    .fix-section { background: var(--sand); color: var(--near-black); padding: 5rem 3.5rem; }
+    .fix-inner { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 1.15fr 1fr; gap: 4rem; align-items: start; }
+    .fix-inner.single { grid-template-columns: 1fr; max-width: 760px; }
+    .fix-section .section-label { color: var(--clay-ink); }
+    .fix-heading { font-family: 'Playfair Display', Georgia, serif; font-size: 2rem; font-weight: 700; color: var(--forest); line-height: 1.25; margin-bottom: 1rem; }
+    .fix-text { font-size: 1rem; line-height: 1.85; color: var(--ink-warm); margin-bottom: 1rem; }
+    .gut-check { background: rgba(254,252,248,0.6); border-radius: 14px; padding: 1.75rem; margin-top: 1.5rem; }
+    .gut-check .hint { font-size: 0.9rem; color: var(--ink-warm); margin: -0.4rem 0 0.9rem; }
+    .fix-section .tracker-row { margin-top: 1.5rem; }
+
+    /* HOW EACH SECTION WORKS (forest, static cards) */
+    .concepts { background: var(--forest); padding: 4.5rem 3.5rem; border-top: 1px solid rgba(122,158,110,0.15); }
+    .concepts-inner { max-width: 1200px; margin: 0 auto; }
+    .concepts-header { display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem; flex-wrap: wrap; margin-bottom: 2.5rem; }
+    .concepts .section-label { color: var(--ember-light); }
+    .concepts-heading { font-family: 'Playfair Display', Georgia, serif; font-size: 1.7rem; font-weight: 700; color: var(--cream); margin-top: 0.4rem; }
+    .concepts-count { font-size: 0.78rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--on-dark); }
+    .concepts-list { list-style: none; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
+    .concept-card { background: var(--sand); border-radius: 12px; padding: 1.6rem; color: var(--near-black); }
+    .concept-tag { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--clay-ink); margin-bottom: 0.6rem; }
+    .concept-name { font-family: 'Playfair Display', Georgia, serif; font-size: 1.2rem; font-weight: 700; color: var(--forest); line-height: 1.3; margin-bottom: 0.4rem; }
+    .concept-def { font-size: 0.92rem; line-height: 1.65; color: var(--ink-warm); }
+    .udl-note { margin-top: 2rem; font-size: 0.95rem; line-height: 1.8; color: var(--on-dark); }
+    .udl-note strong { color: var(--cream); }
+
+    /* PRE-CLASS CHECKLIST */
+    .checklist-block { background: var(--sage-pale); color: var(--near-black); padding: 4rem 3.5rem; }
+    .checklist-inner { max-width: 1200px; margin: 0 auto; }
+    .checklist-label { font-size: 0.88rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--moss-deep); margin-bottom: 1.5rem; }
+    .checklist { list-style: none; display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.25rem; }
+    .checklist li { display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.98rem; line-height: 1.7; color: var(--near-black); background: rgba(255,255,255,0.75); border: 1px solid rgba(74,103,65,0.12); border-radius: 12px; padding: 1.4rem 1.5rem; }
+    .check-num { font-size: 0.72rem; font-weight: 700; color: var(--clay-deep); background: rgba(196,98,45,0.12); border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; }
+    .check-time { font-size: 0.8rem; color: var(--ink-soft); }
+
+    .slide-lines.plain .slide-line { grid-template-columns: 1fr; }
+    .slide-lines.plain .slide-line::before { content: none; }
+
+    /* REQUIRED READING (same card as the section pages) */
+    .reading-section { background: var(--white); color: var(--near-black); padding: 4rem 3.5rem; }
+    .reading-inner { max-width: 1200px; margin: 0 auto; }
+    .reading-section .overview-heading { margin-bottom: 1.25rem; }
+    .reading-grid { display: grid; grid-template-columns: 1fr 1.2fr; gap: 3.5rem; align-items: start; }
+    .reading-title { font-family: 'Playfair Display', Georgia, serif; font-size: 1.3rem; font-style: italic; font-weight: 700; color: var(--forest); line-height: 1.35; margin-bottom: 0.25rem; }
+    .reading-source { font-size: 0.95rem; color: var(--ink-soft); margin-bottom: 1.5rem; }
+    .reading-section .btn-begin { text-transform: none; letter-spacing: 0.02em; font-size: 0.95rem; }
+    .reading-note-small { font-size: 0.9rem; color: var(--ink-soft); margin-top: 0.75rem; }
+    .reading-cite { font-size: 0.82rem; line-height: 1.6; color: var(--ink-soft); margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--field-line); }
+    .look-heading { font-size: 0.8rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--moss-deep); margin-bottom: 0.75rem; }
+    .look-list { list-style: none; display: grid; gap: 0.75rem; }
+    .look-list li { display: flex; align-items: center; gap: 1rem; background: var(--cream); border-left: 4px solid var(--moss-deep); border-radius: 0 10px 10px 0; padding: 1rem 1.25rem; font-size: 1rem; line-height: 1.5; color: var(--near-black); }
+    .page-chip { flex: none; min-width: 6.5rem; text-align: center; font-size: 0.85rem; font-weight: 700; color: var(--white); background: var(--moss-deep); border-radius: 999px; padding: 0.3rem 0.75rem; }
+    .checklist.two { grid-template-columns: 1fr 1fr; max-width: 900px; }
+
+    @media (max-width: 1000px) { .concepts-list, .checklist { grid-template-columns: 1fr 1fr; } .fix-inner, .reading-grid { grid-template-columns: 1fr; gap: 2.5rem; } }
+    @media (max-width: 768px) {
+      .top-nav { padding: 5rem 1.5rem 1.25rem; }
+      .hero-content { padding-left: 1.5rem; padding-right: 1.5rem; }
+      .hero-stats { flex-wrap: wrap; }
+      .stat { flex: 1 1 50%; padding: 1rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.2); }
+      .overview, .fix-section, .concepts, .unit-framing, .checklist-block, .reading-section, .begin-section { padding: 3rem 1.5rem; }
+      .overview-inner { grid-template-columns: 1fr; gap: 3rem; }
+      .outcomes-grid, .concepts-list, .checklist, .checklist.two { grid-template-columns: 1fr; }
+      .begin-action { align-items: flex-start; }
+      .slide-head, .slide-line { padding-left: 1.25rem; padding-right: 1.25rem; }
+    }
+
+
+  </style>
+<script>
+/* ============================================================
+   EDCI 487 · shared behaviour (inline so each page works on its own)
+   ============================================================ */
+(function () {
+  var NS = 'reflection-to-action';
+  var root = document.documentElement;
+  function get(k, d) { try { var v = localStorage.getItem(NS + ':' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } }
+  function set(k, v) { try { localStorage.setItem(NS + ':' + k, JSON.stringify(v)); return true; } catch (e) { return false; } }
+
+  /* Display preferences (UDL) */
+  var prefs = get('prefs', { large: false, calm: false, dyslexia: false });
+  /* Dyslexia-friendly font: Lexend, loaded only when the option is on */
+  function loadDysFont() {
+    if (document.getElementById('dys-font')) return;
+    var l = document.createElement('link');
+    l.id = 'dys-font'; l.rel = 'stylesheet';
+    l.href = 'https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700&display=swap';
+    document.head.appendChild(l);
+  }
+  if (prefs.dyslexia) loadDysFont();
+  root.classList.toggle('pref-dyslexia', !!prefs.dyslexia);
+  root.classList.toggle('pref-large', !!prefs.large);
+  root.classList.toggle('pref-calm', !!prefs.calm);
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!reduce && !prefs.calm && 'IntersectionObserver' in window) root.classList.add('js-reveal');
+
+  document.addEventListener('DOMContentLoaded', function () {
+    var page = document.body.getAttribute('data-page');          // "intro" | "1".."4"
+
+    /* --- Sidebar --- */
+    var toggle = document.querySelector('.sidebar-toggle');
+    var sidebar = document.getElementById('sidebar');
+    var overlay = document.querySelector('.sidebar-overlay');
+    function setOpen(open, back) {
+      sidebar.classList.toggle('open', open);
+      overlay.classList.toggle('visible', open);
+      toggle.setAttribute('aria-expanded', String(open));
+      toggle.setAttribute('aria-label', open ? 'Close module menu' : 'Open module menu');
+      if (open) { sidebar.removeAttribute('inert'); var f = sidebar.querySelector('a,button'); if (f) f.focus(); }
+      else { sidebar.setAttribute('inert', ''); if (back) toggle.focus(); }
+    }
+    sidebar.setAttribute('inert', '');
+    toggle.addEventListener('click', function () { setOpen(!sidebar.classList.contains('open')); });
+    overlay.addEventListener('click', function () { setOpen(false, true); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && sidebar.classList.contains('open')) setOpen(false, true); });
+    /* A11Y (WCAG 2.4.11): close when Tab leaves the menu, so focus never lands behind the overlay */
+    sidebar.addEventListener('focusout', function (e) {
+      var to = e.relatedTarget;
+      if (sidebar.classList.contains('open') && to && to !== toggle && !sidebar.contains(to)) setOpen(false);
+    });
+
+    /* --- Display option buttons --- */
+    document.querySelectorAll('.pref-btn').forEach(function (b) {
+      var k = b.getAttribute('data-pref');
+      b.setAttribute('aria-pressed', String(!!prefs[k]));
+      b.querySelector('.state').textContent = prefs[k] ? 'On' : 'Off';
+      b.addEventListener('click', function () {
+        prefs[k] = !prefs[k]; set('prefs', prefs);
+        b.setAttribute('aria-pressed', String(prefs[k]));
+        b.querySelector('.state').textContent = prefs[k] ? 'On' : 'Off';
+        root.classList.toggle('pref-' + k, prefs[k]);
+        if (k === 'calm' && prefs.calm) { root.classList.remove('js-reveal'); }
+        if (k === 'dyslexia' && prefs.dyslexia) { loadDysFont(); }
+      });
+    });
+
+    /* --- Progress: sidebar checkmarks (+ tracker, if a page has one) --- */
+    var done = get('done', {});
+    function paint() {
+      document.querySelectorAll('.nav-item[data-key]').forEach(function (a) {
+        var on = !!done[a.getAttribute('data-key')];
+        a.classList.toggle('is-done', on);
+        a.querySelector('.nav-check').textContent = on ? '\u2713' : '';
+        var sr = a.querySelector('.done-sr'); if (sr) sr.textContent = on ? ' (completed)' : '';
+      });
+      document.querySelectorAll('.tracker li[data-line]').forEach(function (li) {
+        var n = li.getAttribute('data-line'), on = !!done[n];
+        li.classList.toggle('is-done', on);
+        li.classList.toggle('is-current', n === page);
+        li.querySelector('.dot').textContent = on ? '\u2713' : '';
+        li.querySelector('.state').textContent = on ? 'done' : (n === page ? 'you are here' : 'not started');
+      });
+    }
+    paint();
+    var end = document.getElementById('page-end');
+    if (end && 'IntersectionObserver' in window) {
+      var io = new IntersectionObserver(function (es) {
+        if (es.some(function (e) { return e.isIntersecting; })) { done[page] = true; set('done', done); paint(); io.disconnect(); }
+      }, { threshold: 0.3 });
+      io.observe(end);
+    }
+
+    /* --- Scroll progress bar + reveal --- */
+    var bar = document.getElementById('progress-bar');
+    if (bar) window.addEventListener('scroll', function () {
+      var d = document.documentElement, m = d.scrollHeight - d.clientHeight;
+      bar.style.transform = 'scaleX(' + (m > 0 ? Math.min(d.scrollTop / m, 1) : 1) + ')';
+    }, { passive: true });
+    if (root.classList.contains('js-reveal')) {
+      var ro = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('visible'); ro.unobserve(e.target); } }); }, { threshold: 0.06 });
+      document.querySelectorAll('.reveal').forEach(function (el) { ro.observe(el); });
+      document.addEventListener('focusin', function (e) { var r = e.target.closest && e.target.closest('.reveal'); if (r) r.classList.add('visible'); });
+    }
+
+    /* --- Choice activities: feedback written for every option --- */
+    document.querySelectorAll('[data-check]').forEach(function (box) {
+      var out = box.querySelector('.feedback'), btn = box.querySelector('.btn-check'), store = box.getAttribute('data-store');
+      function run() {
+        var p = box.querySelector('input[type=radio]:checked');
+        out.classList.remove('is-nudge');
+        if (!p) { out.classList.add('is-nudge'); out.innerHTML = '<span class="verdict">Choose an option first.</span>'; return; }
+        if (store) set(store, p.value);
+        var v = p.getAttribute('data-verdict');
+        var label = v === 'match' ? (box.getAttribute('data-match') || 'That matches the thinking here.') : v === 'nudge' ? 'Worth another look.' : '';
+        if (v === 'nudge') out.classList.add('is-nudge');
+        out.innerHTML = (label ? '<span class="verdict">' + label + '</span>' : '') + p.getAttribute('data-feedback');
+      }
+      if (store) { var prev = get(store, null); if (prev) { var r = box.querySelector('input[value="' + prev + '"]'); if (r) r.checked = true; } }
+      if (btn) btn.addEventListener('click', run);
+      else box.querySelectorAll('input[type=radio]').forEach(function (r) { r.addEventListener('change', run); });
+    });
+
+    /* --- Notes: saved on this device only, downloadable --- */
+    document.querySelectorAll('textarea[data-note]').forEach(function (ta) {
+      var key = 'note:' + ta.getAttribute('data-note'), st = document.getElementById(ta.id + '-status'), t;
+      ta.value = get(key, '');
+      ta.addEventListener('input', function () {
+        clearTimeout(t);
+        t = setTimeout(function () {
+          var ok = set(key, ta.value);
+          if (st) st.textContent = ok ? 'Saved on this device.' : 'Not saved: your browser is blocking storage. Download your note before leaving.';
+        }, 600);
+      });
+    });
+    document.querySelectorAll('[data-download]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var ta = document.getElementById(b.getAttribute('data-download'));
+        var lab = document.querySelector('label[for="' + ta.id + '"]');
+        var blob = new Blob([(lab ? lab.textContent.trim() : 'My note') + '\n\n' + ta.value], { type: 'text/plain' });
+        var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = ta.id + '.txt';
+        document.body.appendChild(a); a.click(); a.remove(); setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+      });
+    });
+  });
+})();
+</script>
+
+</head>
+<body data-page="intro">
+<a class="skip-link" href="#main">Skip to main content</a>
+<button class="sidebar-toggle" type="button" aria-expanded="false" aria-controls="sidebar" aria-label="Open module menu">
+  <span class="bar" aria-hidden="true"></span><span class="bar" aria-hidden="true"></span><span class="bar" aria-hidden="true"></span>
+</button>
+<div class="sidebar-overlay" aria-hidden="true"></div>
+<aside class="sidebar" id="sidebar" aria-label="Module menu">
+  <p class="sidebar-logo">EDCI 487<br>Climate Change Education<span class="module-name">From Reflection to Action</span></p>
+  <nav class="sidebar-nav" aria-label="Module sections">
+    <ol>
+      <li><a class="nav-item" data-key="intro" href="index.html" aria-current="page"><span class="nav-num" aria-hidden="true">&uarr;</span><span class="nav-label">Intro &amp; Overview<span class="sr-only done-sr"></span></span><span class="nav-check" aria-hidden="true"></span></a></li>
+      <li><a class="nav-item" data-key="1" href="section1.html"><span class="nav-num" aria-hidden="true">01</span><span class="nav-label">Transmission or Transformation<span class="sr-only done-sr"></span></span><span class="nav-time"><span class="sr-only">, about </span>3 min</span><span class="nav-check" aria-hidden="true"></span></a></li>
+      <li><a class="nav-item" data-key="2" href="section2.html"><span class="nav-num" aria-hidden="true">02</span><span class="nav-label">Praxis: Reflection and Action<span class="sr-only done-sr"></span></span><span class="nav-time"><span class="sr-only">, about </span>3 min</span><span class="nav-check" aria-hidden="true"></span></a></li>
+      <li><a class="nav-item" data-key="3" href="section3.html"><span class="nav-num" aria-hidden="true">03</span><span class="nav-label">Integrating the Curriculum<span class="sr-only done-sr"></span></span><span class="nav-time"><span class="sr-only">, about </span>4 min</span><span class="nav-check" aria-hidden="true"></span></a></li>
+      <li><a class="nav-item" data-key="4" href="section4.html"><span class="nav-num" aria-hidden="true">04</span><span class="nav-label">Critical Hope<span class="sr-only done-sr"></span></span><span class="nav-time"><span class="sr-only">, about </span>3 min</span><span class="nav-check" aria-hidden="true"></span></a></li>
+    </ol>
+  </nav>
+  <section class="display-options" aria-labelledby="display-h">
+    <h2 id="display-h">Display options</h2>
+    <button type="button" class="pref-btn" data-pref="large" aria-pressed="false"><span>Larger text</span><span class="state" aria-hidden="true">Off</span></button>
+    <button type="button" class="pref-btn" data-pref="dyslexia" aria-pressed="false"><span>Dyslexia-friendly font</span><span class="state" aria-hidden="true">Off</span></button>
+    <button type="button" class="pref-btn" data-pref="calm" aria-pressed="false"><span>Calm mode (no motion)</span><span class="state" aria-hidden="true">Off</span></button>
+  </section>
+</aside>
+
+<main id="main" class="page-layout" tabindex="-1">
+
+<!-- HERO -->
+<header class="hero on-dark">
+  <div class="hero-bg" aria-hidden="true"><div class="ring"></div><div class="ring"></div><div class="ring"></div><div class="ring"></div></div>
+  <div class="hero-slash" aria-hidden="true"></div>
+  <div class="top-nav">
+    <p class="nav-course">EDCI 487 &middot; Climate Change Education</p>
+    <p class="nav-week">Pre-class module</p>
+  </div>
+  <div class="hero-content">
+    <p class="week-label">Praxis and future unit</p>
+    <h1 class="hero-title">
+      <span class="line-1">From Reflection</span>
+      <span class="line-2">to Action</span>
+    </h1>
+    <p class="hero-subtitle">Praxis in climate education.</p>
+    <p class="hero-desc">
+      A climate lesson can give students correct facts and still leave them with nothing to do
+      except remember. This module uses Paulo Freire&rsquo;s ideas to look at a different goal:
+      teaching that helps students understand their world and act on it.
+    </p>
+  </div>
+  <dl class="hero-stats">
+    <div class="stat"><dt>Minutes, module only</dt><dd>~15</dd></div>
+    <div class="stat"><dt>Short sections</dt><dd>4</dd></div>
+    <div class="stat"><dt>Required reading</dt><dd>1</dd></div>
+  </dl>
+</header>
+
+<!-- UNIT FRAMING -->
+<section class="unit-framing on-dark" aria-labelledby="unit-h">
+  <div class="unit-framing-inner">
+    <h2 class="unit-eyebrow" id="unit-h">Unit framing question</h2>
+    <p class="unit-q">&ldquo;What forms of education can prepare us for the long haul?&rdquo;</p>
+    <p class="unit-desc">
+      So far in the course, you have looked at our relationships with Earth&rsquo;s cycles and at climate change
+      as a complex system. This unit turns to practice: what we do as teachers, and how a classroom
+      can become a place where students think and act together.
+    </p>
+  </div>
+</section>
+
+<!-- OVERVIEW -->
+<section class="overview" aria-labelledby="overview-h">
+  <div class="overview-inner">
+    <div>
+      <p class="section-label">Module overview</p>
+      <h2 class="overview-heading" id="overview-h">Four ideas, one real classroom</h2>
+      <p class="overview-lead">
+        Each section covers one idea from Freire and the reading. Along the way, you&rsquo;ll keep
+        coming back to one real example from the reading: a wetlands unit taught by an elementary
+        teacher in Chile.
+      </p>
+    </div>
+    <div>
+      <p class="overview-body">
+        Each section is short: an opening question, the main points, and one quick quiz or reflection.
+        Nothing is graded or submitted.
+      </p>
+      <p class="lo-intro" id="lo-h">By the end of this module, you will be able to:</p>
+      <ol class="outcomes-grid" aria-labelledby="lo-h">
+        <li class="outcome-card">
+          <p class="outcome-number">LO1 &middot; Section 1</p>
+          <span class="outcome-icon" aria-hidden="true">🔄</span>
+          <p class="outcome-title">Distinguish</p>
+          <p class="outcome-body">Distinguish teaching for transformation from the transmission of information.</p>
+        </li>
+        <li class="outcome-card">
+          <p class="outcome-number">LO2 &middot; Section 2</p>
+          <span class="outcome-icon" aria-hidden="true">🔁</span>
+          <p class="outcome-title">Explain</p>
+          <p class="outcome-body">Explain Freirean praxis as the relationship between reflection and action.</p>
+        </li>
+        <li class="outcome-card">
+          <p class="outcome-number">LO3 &middot; Section 3</p>
+          <span class="outcome-icon" aria-hidden="true">🧩</span>
+          <p class="outcome-title">Consider</p>
+          <p class="outcome-body">Consider how curriculum can bring together the scientific, social, ethical, cultural, and political sides of climate change.</p>
+        </li>
+        <li class="outcome-card">
+          <p class="outcome-number">LO4 &middot; Section 4</p>
+          <span class="outcome-icon" aria-hidden="true">🌱</span>
+          <p class="outcome-title">Explore</p>
+          <p class="outcome-body">Explore the role of critical hope in responding to the climate crisis.</p>
+        </li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<!-- GUT CHECK -->
+<section class="fix-section" aria-labelledby="fix-h">
+  <div class="fix-inner single">
+    <div>
+      <p class="section-label">Before you begin</p>
+      <h2 class="fix-heading" id="fix-h">Where do you stand right now?</h2>
+      <p class="fix-text">Go with your first instinct.</p>
+      <div class="gut-check" data-check data-store="gut-check">
+        <fieldset class="choice-set">
+          <legend>Quick gut check: what is the main job of a climate lesson?</legend>
+          <p class="hint">No right answer. You&rsquo;ll see your pick again in Section 4.</p>
+          <label class="choice"><input type="radio" name="gut" value="facts" data-feedback="Accurate facts matter. Section 1 asks whether facts alone change how students understand their world."><span>To give students accurate facts</span></label>
+          <label class="choice"><input type="radio" name="gut" value="habits" data-feedback="Changing habits is a common goal. Section 2 asks what happens when action comes without reflection."><span>To change students&rsquo; everyday habits</span></label>
+          <label class="choice"><input type="radio" name="gut" value="world" data-feedback="This is close to Freire&rsquo;s view. The sections show what it looks like in a real classroom."><span>To help students understand their world and act on it together</span></label>
+        </fieldset>
+        <div class="feedback" role="status" aria-live="polite"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW EACH SECTION WORKS -->
+<section class="concepts on-dark" aria-labelledby="steps-h">
+  <div class="concepts-inner">
+    <div class="concepts-header">
+      <div>
+        <p class="section-label">How each section works</p>
+        <h2 class="concepts-heading" id="steps-h">Three short parts, every time</h2>
+      </div>
+      <p class="concepts-count">4 sections &middot; about 3&ndash;4 minutes each</p>
+    </div>
+    <ol class="concepts-list">
+      <li class="concept-card"><p class="concept-tag">Part 1</p><h3 class="concept-name">Opener</h3><p class="concept-def">A question about your own experience as a student or teacher.</p></li>
+      <li class="concept-card"><p class="concept-tag">Part 2</p><h3 class="concept-name">Main points</h3><p class="concept-def">The key ideas, with page numbers so you can find them in the reading.</p></li>
+      <li class="concept-card"><p class="concept-tag">Part 3</p><h3 class="concept-name">Quiz or reflection</h3><p class="concept-def">One quick question with feedback, or one short reflection with a sample answer.</p></li>
+    </ol>
+    <p class="udl-note">
+      <strong>Make it work for you.</strong> Move between sections any time from the menu (top left).
+      Under <strong>Display options</strong> you can turn on larger text, a dyslexia-friendly font, or calm mode. Reflections save on
+      this device only, and you can write, sketch, or say your answers aloud instead.
+    </p>
+  </div>
+</section>
+
+<!-- REQUIRED READING -->
+<section class="reading-section" aria-labelledby="reading-h">
+  <div class="reading-inner reading-grid">
+    <div>
+      <p class="section-label">Required reading &middot; About 45&ndash;60 minutes</p>
+      <h2 class="overview-heading" id="reading-h">Read the full article</h2>
+      <p class="reading-title">Freire&rsquo;s hope in radically changing times</p>
+      <p class="reading-source">Salinas et al. (2023), <i>Cultural Studies of Science Education</i></p>
+      <a class="btn-begin" href="https://doi.org/10.1007/s11422-023-10157-4" target="_blank" rel="noopener">Open the article<span class="sr-only"> (opens in a new tab)</span> <span class="arrow" aria-hidden="true"></span></a>
+      <p class="reading-note-small">Asked to sign in? Use your UVic Libraries login.</p>
+      <p class="reading-cite">Salinas, I., Fern&aacute;ndez, M. B., Johnson, D., &amp; Basti&aacute;s, N. (2023). Freire&rsquo;s hope in radically changing times: A dialogue for curriculum integration from science education to face the climate crisis. <i>Cultural Studies of Science Education, 18</i>(1), 21&ndash;39.</p>
+    </div>
+    <div>
+      <h3 class="look-heading">Pay special attention to</h3>
+      <ul class="look-list">
+        <li><span class="page-chip">pp. 24&ndash;26</span><span>Banking vs. problem-posing teaching, and &ldquo;limit-situations&rdquo;</span></li>
+        <li><span class="page-chip">pp. 34&ndash;36</span><span>Nataly Basti&aacute;s&rsquo;s wetlands unit with Grade 5 and 6 students</span></li>
+        <li><span class="page-chip">p. 35</span><span>Why the authors call it &ldquo;a work of hope&rdquo;</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- PRE-CLASS CHECKLIST -->
+<section class="checklist-block" aria-labelledby="todo-h">
+  <div class="checklist-inner">
+    <h2 class="checklist-label" id="todo-h">Your pre-class work for this module</h2>
+    <ul class="checklist two">
+      <li><span class="check-num" aria-hidden="true">01</span><span>Work through this <strong>module</strong>: four short sections</span><span class="check-time">About 15 minutes</span></li>
+      <li><span class="check-num" aria-hidden="true">02</span><span>Read the full article by <strong>Salinas et al. (2023)</strong>, before or after the module</span><span class="check-time">About 45&ndash;60 minutes</span></li>
+    </ul>
+  </div>
+</section>
+
+<!-- BEGIN CTA -->
+<section class="begin-section" id="page-end" aria-labelledby="begin-h">
+  <div class="begin-row">
+    <div class="begin-text">
+      <h2 class="begin-heading" id="begin-h">Ready to begin?</h2>
+      <p class="begin-sub">About 15 minutes for the module and 45&ndash;60 for the reading. You can stop after any section; your progress is saved on this device.</p>
+    </div>
+    <div class="begin-action">
+      <a class="btn-begin" href="section1.html">Start module <span class="arrow" aria-hidden="true"></span></a>
+      <span class="time-note">Next: Transmission or Transformation &middot; 3 min</span>
+    </div>
+  </div>
+</section>
+
+</main>
+<footer class="site-footer on-dark">
+  <p>EDCI 487 &middot; Climate Change Education &middot; University of Victoria. Need this module in another format? Contact your instructor through Brightspace.</p>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,8 @@
+# Publish only the module pages. Everything else stays local.
+/*
+!/index.html
+!/section1.html
+!/section2.html
+!/section3.html
+!/section4.html
+!/.gitignore

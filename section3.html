@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en-CA">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Integrating the Curriculum — EDCI 487</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    /* ============================================================
+       EDCI 487 · shared look
+       SHARED: everything down to "END SHARED" (and the whole <script>)
+       must stay identical on every page. Check: bash tools/check-shared.sh
+       A11Y: comments mark accessibility changes to the original design
+       ============================================================ */
+    :root {
+      --forest:     #2d5a3f;
+      --forest-2:   #2f4a2f;   /* sidebar */
+      --near-black: #1c1a14;
+      --moss:       #4a6741;
+      --moss-deep:  #3d5a35;
+      --sage:       #7a9e6e;   /* decorative only on dark green */
+      --sage-light: #b8d1ab;   /* A11Y: sage text on forest (4.8:1) */
+      --sage-pale:  #deebd4;
+      --clay:       #c4622d;   /* decorative only (bars, dots) */
+      --clay-deep:  #a64d1f;   /* A11Y: CTA + clay text on light (5.5:1) */
+      --clay-ink:   #8a3f17;   /* A11Y: CTA hover (darkens instead of lightening) */
+      --ember:      #e8874a;
+      --ember-light:#f6bb92;   /* A11Y: ember text on forest (4.7:1) */
+      --sand:       #e8d5b0;
+      --cream:      #f5f0e8;
+      --white:      #fefcf8;
+      --ink-soft:   #465543;   /* A11Y: replaces rgba(26,46,26,.4–.6) body text (7:1) */
+      --on-dark:    #d7dacf;   /* A11Y: replaces rgba(245,240,232,.25–.6) on forest (5.6:1) */
+      --ink-warm:   #3a3a2c;   /* body text on sand (9:1) */
+      --ink-green:  #2c3a2a;   /* body text on sage-pale (10:1) */
+      --on-clay:    #fff4ec;   /* small text on clay-deep (5.2:1) */
+      --clay-wash:  #fbeee4;   /* highlighted slide line */
+      --field-line: #6c7a68;   /* form field borders (3:1+ on cream) */
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    @media (prefers-reduced-motion: no-preference) { html:not(.pref-calm) { scroll-behavior: smooth; } }
+    html.pref-large { font-size: 118.75%; }
+    /* UDL: dyslexia-friendly font (Lexend), no italics, a little more letter, word and line spacing */
+    html.pref-dyslexia body, html.pref-dyslexia body * { font-family: 'Lexend', 'DM Sans', system-ui, sans-serif !important; font-style: normal !important; }
+    html.pref-dyslexia body { letter-spacing: 0.02em; word-spacing: 0.12em; }
+    html.pref-dyslexia p, html.pref-dyslexia li, html.pref-dyslexia label { line-height: 1.9 !important; }
+    body { font-family: 'DM Sans', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif; font-weight: 400; overflow-x: hidden; min-height: 100vh; line-height: 1.6; }
+    a { color: var(--clay-deep); text-underline-offset: 3px; }
+    strong { font-weight: 600; }
+
+    /* A11Y: visible focus, skip link, screen-reader-only text */
+    :focus-visible { outline: 3px solid var(--clay-deep); outline-offset: 3px; border-radius: 2px; }
+    .on-dark :focus-visible, .sidebar :focus-visible, .sidebar-toggle:focus-visible { outline-color: var(--sand); }
+    .skip-link { position: absolute; left: 1rem; top: -100px; z-index: 10000; background: var(--white); color: var(--near-black); padding: 0.75rem 1.25rem; border-radius: 6px; font-weight: 600; text-decoration: none; }
+    .skip-link:focus { top: 1rem; }
+    .sr-only { position: absolute !important; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+    /* HAMBURGER TOGGLE — A11Y: 48px target, labelled, aria-expanded */
+    .sidebar-toggle { position: fixed; top: 1rem; left: 1rem; z-index: 200; width: 48px; height: 48px; background: rgba(47,74,47,0.95); border: 1px solid rgba(122,158,110,0.4); border-radius: 8px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; padding: 0; }
+    .sidebar-toggle:hover { background: var(--forest-2); }
+    .sidebar-toggle .bar { display: block; width: 18px; height: 2px; background: var(--cream); border-radius: 1px; transition: transform 0.3s ease, opacity 0.3s ease; }
+    .sidebar-toggle[aria-expanded="true"] .bar:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .sidebar-toggle[aria-expanded="true"] .bar:nth-child(2) { opacity: 0; }
+    .sidebar-toggle[aria-expanded="true"] .bar:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+    .sidebar-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 140; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+    .sidebar-overlay.visible { opacity: 1; pointer-events: auto; }
+
+    /* SIDEBAR — A11Y: hidden + inert when closed so keyboard users don't tab into it */
+    .sidebar { position: fixed; top: 0; left: 0; width: 280px; height: 100vh; background: var(--forest-2); border-right: 1px solid rgba(122,158,110,0.2); z-index: 150; display: flex; flex-direction: column; padding: 5rem 0 1.5rem; overflow-y: auto; transform: translateX(-100%); visibility: hidden; transition: transform 0.3s ease, visibility 0s 0.3s; }
+    .sidebar.open { transform: translateX(0); visibility: visible; transition: transform 0.3s ease; }
+    .sidebar-logo { font-size: 0.75rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--on-dark); padding: 0 1rem 1.25rem 2rem; border-bottom: 1px solid rgba(122,158,110,0.2); margin-bottom: 1rem; line-height: 1.7; }
+    .sidebar-logo .module-name { display: block; color: var(--sand); letter-spacing: 0.08em; margin-top: 0.25rem; }
+    .sidebar-nav ol { list-style: none; }
+    .nav-item { display: flex; align-items: baseline; gap: 0.5rem; min-height: 44px; padding: 0.7rem 1rem 0.7rem 2rem; position: relative; text-decoration: none; color: var(--on-dark); }
+    .nav-item:hover { background: rgba(245,240,232,0.06); color: var(--cream); }
+    .nav-item[aria-current="page"]::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--ember); }
+    .nav-num { font-size: 0.75rem; font-weight: 600; width: 1.6rem; flex-shrink: 0; }
+    .nav-item[aria-current="page"] .nav-num { color: var(--ember-light); }
+    .nav-label { font-size: 0.875rem; line-height: 1.45; flex: 1; min-width: 0; }
+    .nav-item[aria-current="page"] .nav-label { color: var(--cream); font-weight: 600; }
+    .nav-time { font-size: 0.75rem; white-space: nowrap; }
+    .nav-check { width: 1.1rem; height: 1.1rem; flex-shrink: 0; align-self: center; border-radius: 50%; border: 1.5px solid rgba(215,218,207,0.6); display: inline-grid; place-items: center; font-size: 0.68rem; }
+    .nav-item.is-done .nav-check { background: var(--sage-light); border-color: var(--sage-light); color: var(--forest-2); }
+    .display-options { margin-top: auto; padding: 1.25rem 1.25rem 0 2rem; border-top: 1px solid rgba(122,158,110,0.2); }
+    .display-options h2 { font: 600 0.75rem 'DM Sans', sans-serif; letter-spacing: 0.14em; text-transform: uppercase; color: var(--on-dark); margin-bottom: 0.6rem; }
+    .pref-btn { display: flex; width: 100%; justify-content: space-between; align-items: center; min-height: 44px; margin-bottom: 0.4rem; padding: 0.5rem 0.75rem; background: transparent; color: var(--cream); border: 1px solid rgba(215,218,207,0.45); border-radius: 6px; font: 400 0.85rem 'DM Sans', sans-serif; cursor: pointer; text-align: left; }
+    .pref-btn .state { font-size: 0.75rem; color: var(--on-dark); }
+    .pref-btn[aria-pressed="true"] { background: rgba(232,213,176,0.15); border-color: var(--sand); }
+
+    /* LINE TRACKER — "Your slide" progress (UDL: self-monitoring) */
+    .tracker-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; }
+    .tracker { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; list-style: none; }
+    .tracker-label { font-size: 0.8rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--moss-deep); margin-right: 0.25rem; }
+    .tracker li { display: inline-flex; align-items: center; gap: 0.45rem; font-size: 0.9rem; color: var(--ink-soft); }
+    .tracker .dot { width: 1.25rem; height: 1.25rem; border-radius: 50%; border: 2px solid var(--moss); display: inline-grid; place-items: center; font-size: 0.72rem; font-weight: 700; color: var(--white); }
+    .tracker li.is-done .dot { background: var(--moss-deep); border-color: var(--moss-deep); }
+    .tracker li.is-current { color: var(--near-black); font-weight: 600; }
+    .tracker li.is-current .dot { border-color: var(--clay-deep); border-width: 3px; }
+
+    /* THE SLIDE — the artifact the whole module revises */
+    .slide { background: var(--white); border-radius: 14px; box-shadow: 0 12px 40px rgba(26,46,26,0.14); border-top: 8px solid var(--clay); overflow: hidden; max-width: 760px; }
+    .slide-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1.25rem 2rem; border-bottom: 1px solid rgba(74,103,65,0.15); }
+    .slide-title { font-family: 'Playfair Display', Georgia, serif; font-size: 1.5rem; font-weight: 700; color: var(--forest); }
+    .slide-tag { font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-soft); }
+    .slide-lines { list-style: none; counter-reset: line; padding: 0.5rem 0; }
+    .slide-line { counter-increment: line; display: grid; grid-template-columns: 2.5rem 1fr; gap: 0.75rem; padding: 1rem 2rem; border-bottom: 1px dashed rgba(74,103,65,0.18); }
+    .slide-line:last-child { border-bottom: 0; }
+    .slide-line::before { content: counter(line); font-family: 'Playfair Display', Georgia, serif; font-size: 1.6rem; font-weight: 900; color: var(--clay-deep); line-height: 1.1; }
+    .slide-q { display: block; font-size: 0.8rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--moss-deep); margin-bottom: 0.15rem; }
+    .slide-a { font-size: 1.05rem; line-height: 1.6; color: var(--near-black); }
+    .slide-line.is-focus { background: var(--clay-wash); }
+
+    /* CHOICE ACTIVITIES (predict, gut check) */
+    .choice-set { border: 0; }
+    .choice-set legend { font-size: 1.05rem; font-weight: 600; color: var(--near-black); margin-bottom: 0.9rem; line-height: 1.5; }
+    .choice { display: flex; gap: 0.75rem; align-items: flex-start; background: rgba(254,252,248,0.9); border: 1.5px solid rgba(74,103,65,0.3); border-radius: 10px; padding: 0.85rem 1rem; margin-bottom: 0.6rem; cursor: pointer; line-height: 1.6; color: var(--near-black); }
+    .choice:hover { border-color: var(--moss); }
+    .choice input { margin-top: 0.3rem; width: 1.15rem; height: 1.15rem; accent-color: var(--moss-deep); flex-shrink: 0; }
+    .choice:has(input:checked) { border-color: var(--moss-deep); background: var(--white); box-shadow: 0 0 0 1px var(--moss-deep); }
+    .btn-check { display: inline-flex; align-items: center; min-height: 44px; padding: 0.6rem 1.4rem; margin-top: 0.4rem; background: var(--forest); color: var(--cream); border: 0; border-radius: 6px; font: 600 0.9rem 'DM Sans', sans-serif; cursor: pointer; }
+    .btn-check:hover { background: var(--moss-deep); }
+    .btn-ghost { background: transparent; color: var(--near-black); border: 1.5px solid var(--near-black); }
+    .btn-ghost:hover { background: var(--near-black); color: var(--cream); }
+    .feedback { margin-top: 0.9rem; background: var(--white); border-left: 4px solid var(--moss); border-radius: 0 8px 8px 0; padding: 0.9rem 1.1rem; line-height: 1.75; color: var(--near-black); }
+    /* A11Y: keep the live region rendered when empty; display:none regions can be missed by VoiceOver */
+    .feedback:empty { padding: 0; margin: 0; border: 0; }
+    .feedback .verdict { display: block; font-weight: 700; margin-bottom: 0.2rem; }
+    .feedback.is-nudge { border-left-color: var(--clay-deep); }
+
+    /* SCROLL REVEAL — A11Y: only hides content when JS runs AND motion is allowed */
+    html.js-reveal .reveal { opacity: 0; transform: translateY(20px); transition: opacity 0.55s ease, transform 0.55s ease; }
+    html.js-reveal .reveal.visible { opacity: 1; transform: none; }
+
+    /* CTA — A11Y: solid --clay-deep (5.5:1); hover darkens */
+    .btn-begin { display: inline-flex; align-items: center; gap: 1rem; min-height: 48px; background: var(--clay-deep); color: var(--white); font: 600 0.88rem 'DM Sans', sans-serif; letter-spacing: 0.08em; text-transform: uppercase; text-decoration: none; padding: 1rem 2rem; border-radius: 4px; transition: background 0.2s; }
+    .btn-begin:hover, .btn-begin:focus-visible { background: var(--clay-ink); color: var(--white); }
+    .btn-begin .arrow { width: 20px; height: 2px; background: currentColor; position: relative; }
+    .btn-begin .arrow::after { content: ''; position: absolute; right: 0; top: -3px; width: 7px; height: 7px; border-right: 2px solid currentColor; border-top: 2px solid currentColor; transform: rotate(45deg); }
+    .begin-section { background: var(--cream); padding: 4rem 3rem; }
+    .begin-row { display: flex; justify-content: space-between; align-items: center; gap: 3rem; flex-wrap: wrap; width: min(1080px, 100%); margin: 0 auto; }
+    .begin-heading { font-family: 'Playfair Display', Georgia, serif; font-size: 2rem; color: var(--forest); font-weight: 700; margin-bottom: 0.6rem; }
+    .begin-sub { font-size: 1rem; line-height: 1.75; color: var(--ink-soft); max-width: 520px; }
+    .begin-action { display: flex; flex-direction: column; align-items: flex-end; gap: 0.75rem; }
+    .time-note { font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); }
+
+    .site-footer { background: var(--forest-2); color: var(--on-dark); padding: 1.5rem 3rem; font-size: 0.85rem; line-height: 1.7; }
+    .site-footer a { color: var(--sand); }
+
+    /* A11Y: OS reduced motion + learner "calm mode" */
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; } }
+    html.pref-calm *, html.pref-calm *::before, html.pref-calm *::after { animation: none !important; transition: none !important; }
+    html.pref-calm body::before, html.pref-calm body::after { display: none; }
+    /* ===== END SHARED ===== */
+
+    /* ===== SECTION PAGES ===== */
+    body { background: var(--cream); color: var(--near-black); }
+    body::after { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 9999; opacity: 0.035; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); background-size: 200px 200px; }
+    #progress-bar { position: fixed; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, var(--clay), var(--ember)); transform-origin: left; transform: scaleX(0); z-index: 1000; }
+    .block-inner { width: min(1080px, 100%); margin: 0 auto; }
+    .back-link { margin-top: 0.75rem; }
+
+    .section-header { background: var(--forest); padding: 2.5rem 3rem 2.5rem 5rem; }
+    .section-header-row { display: flex; align-items: center; gap: 1.5rem; }
+    .sh-number { font-family: 'Playfair Display', Georgia, serif; font-size: 10rem; font-weight: 900; color: rgba(255,255,255,0.2); line-height: 1; flex-shrink: 0; user-select: none; }
+    .sh-number::before { content: attr(data-n); }   /* A11Y: decorative, rendered as CSS content */
+    .sh-center { flex: 1; }
+    .sh-label { font-size: 1rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ember-light); margin-bottom: 0.35rem; font-weight: 500; }
+    .sh-title { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(2rem, 4.5vw, 2.8rem); font-weight: 700; color: var(--cream); line-height: 1.2; }
+    .sh-time { font-size: 0.82rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--on-dark); flex-shrink: 0; }
+
+
+    .content-block { background: var(--white); padding: 3.5rem 3rem 2.5rem; }
+    .content-block.alt { background: var(--cream); }
+    .content-block p { font-size: 1.05rem; line-height: 1.85; color: var(--ink-soft); margin-bottom: 0.9rem; }
+    .content-block p:last-child { margin-bottom: 0; }
+    .content-block strong { color: var(--near-black); }
+    .block-heading { font-family: 'Playfair Display', Georgia, serif; font-size: 1.6rem; font-weight: 700; color: var(--forest); line-height: 1.3; margin-bottom: 1rem; }
+    .step-tag, .content-block .step-tag { font-size: 0.8rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--clay-deep); margin-bottom: 0.5rem; }
+
+    /* the single slide line being fixed */
+    .line-card { background: var(--white); border-left: 6px solid var(--clay); border-radius: 0 12px 12px 0; box-shadow: 0 8px 28px rgba(26,46,26,0.1); padding: 1.5rem 1.75rem; margin: 0.5rem 0 1.5rem; max-width: 760px; }
+    .line-card .slide-q { margin-bottom: 0.35rem; }
+    .line-card .slide-a { font-family: 'Playfair Display', Georgia, serif; font-size: 1.35rem; line-height: 1.5; }
+
+
+    /* predict (sage block) */
+    .predict-block { background: var(--sage-pale); padding: 3.5rem 3rem; }
+    .predict-block .block-heading { margin-bottom: 0.75rem; }
+    .check-block { background: var(--cream); }
+    .predict-intro { line-height: 1.8; margin-bottom: 1.25rem; color: var(--ink-green); }
+
+    /* definition card */
+    .definition-card { background: var(--sage-pale); border-left: 4px solid var(--clay); padding: 2.5rem 3rem; }
+    .definition-card-heading { font-family: 'Playfair Display', Georgia, serif; font-size: 2rem; font-weight: 700; color: var(--forest); margin-bottom: 0.75rem; }
+    .definition-card-body { font-size: 1.1rem; line-height: 1.85; color: var(--ink-green); font-style: italic; }
+
+    /* notes, example lists, quiz items */
+    .source-note { font-size: 0.85rem; color: var(--ink-soft); margin-top: 1rem; }
+    .example-list { list-style: none; display: grid; gap: 1rem; margin-top: 0.5rem; }
+    .example-list li { background: var(--cream); border-radius: 10px; padding: 1.1rem 1.4rem; font-size: 1.02rem; line-height: 1.75; color: var(--ink-soft); }
+    .example-list li strong { display: block; color: var(--near-black); margin-bottom: 0.2rem; }
+    .sort-item + .sort-item { margin-top: 1.75rem; padding-top: 1.75rem; border-top: 1px dashed rgba(74,103,65,0.3); }
+
+    /* concept grid */
+    .concept-grid-section { background: var(--cream); padding: 3.5rem 3rem; }
+    .concept-grid { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    .concept-grid-section.on-white { background: var(--white); }
+    .sides-list { list-style: none; background: var(--cream); border-radius: 12px; margin: 1.5rem 0 1rem; }
+    .sides-list li { display: grid; grid-template-columns: 8.5rem 1fr; gap: 1.25rem; align-items: baseline; padding: 0.95rem 1.5rem; border-top: 1px solid rgba(74,103,65,0.18); font-size: 1.02rem; line-height: 1.6; color: var(--near-black); }
+    .sides-list li:first-child { border-top: 0; }
+    .side-k { font-size: 0.8rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--moss-deep); }
+    .concept-grid-card { background: var(--white); border: 1px solid rgba(74,103,65,0.15); border-radius: 12px; padding: 2rem 1.75rem; display: flex; flex-direction: column; gap: 0.75rem; }
+    .concept-grid.three { grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+    .concept-grid.three .concept-grid-card { padding: 1.4rem 1.4rem 1.5rem; gap: 0.5rem; }
+    .concept-grid.three .card-title { font-size: 1.12rem; line-height: 1.35; }
+    .concept-grid.three .card-body { font-size: 0.95rem; line-height: 1.65; }
+    @media (max-width: 1000px) { .concept-grid.three { grid-template-columns: 1fr; } }
+    .fact-chips { list-style: none; display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0 0 1.25rem; }
+    .fact-chips li { background: var(--white); border: 1px solid rgba(74,103,65,0.25); border-radius: 999px; padding: 0.35rem 0.9rem; font-size: 0.88rem; font-weight: 600; color: var(--moss-deep); }
+    .case-steps { margin: 1.25rem 0 1.5rem; }
+    .content-block .concept-grid-card { background: var(--cream); }
+    .contrast-block p.takeaway, .content-block p.takeaway { font-family: 'Playfair Display', Georgia, serif; font-size: 1.2rem; font-weight: 700; font-style: italic; color: var(--forest); margin: 0 0 1rem; }
+    .card-num { font-size: 0.72rem; font-weight: 700; color: var(--clay-deep); background: rgba(196,98,45,0.12); border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; }
+    .card-title { font-family: 'Playfair Display', Georgia, serif; font-size: 1.3rem; font-weight: 700; color: var(--forest); }
+    .card-body { font-size: 0.98rem; line-height: 1.8; color: var(--ink-soft); }
+    .card-example { font-size: 0.92rem; line-height: 1.7; color: var(--near-black); background: var(--cream); border-radius: 8px; padding: 0.75rem 1rem; }
+
+    /* contrast block */
+    .contrast-block { background: var(--cream); padding: 3rem 3rem 3rem 3.5rem; border-left: 4px solid var(--clay); }
+    .contrast-block .cb-heading { font-family: 'Playfair Display', Georgia, serif; font-size: 1.6rem; font-weight: 700; color: var(--forest); margin-bottom: 1.25rem; }
+    .contrast-block p { font-size: 1.05rem; line-height: 1.85; color: var(--ink-soft); margin-bottom: 0.9rem; }
+    .q-pair { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1.25rem 0; }
+    .q-pair li { background: var(--white); border-radius: 10px; padding: 1.1rem 1.25rem; font-size: 1rem; line-height: 1.6; color: var(--near-black); border: 1px solid rgba(74,103,65,0.15); }
+    .q-pair .q-k { display: block; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 0.3rem; }
+    .q-pair li.is-better { border: 2px solid var(--moss-deep); }
+    .q-pair li.is-better .q-k { color: var(--moss-deep); }
+
+    /* required reading */
+    .reading-block { background: var(--white); padding: 3.5rem 3rem; }
+    .reading-card { max-width: 760px; background: var(--cream); border-left: 6px solid var(--moss-deep); border-radius: 0 12px 12px 0; padding: 1.75rem 2rem; }
+    .reading-meta { font-size: 0.8rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--moss-deep); margin-bottom: 0.4rem; }
+    .reading-title { font-family: 'Playfair Display', Georgia, serif; font-size: 1.35rem; font-weight: 700; color: var(--forest); line-height: 1.35; margin-bottom: 0.25rem; }
+    .reading-source { font-size: 0.95rem; color: var(--ink-soft); margin-bottom: 1.1rem; }
+    .reading-guide { font-size: 1rem; font-weight: 600; color: var(--near-black); margin-bottom: 0.4rem; }
+    .reading-card ul { margin: 0 0 1.25rem 1.25rem; color: var(--ink-soft); line-height: 1.8; }
+    .reading-card .btn-begin { text-transform: none; letter-spacing: 0.02em; font-size: 0.95rem; }
+
+
+
+    /* reflection / fix it */
+    .reflection-block { background: var(--sage-pale); padding: 3.5rem 3rem; }
+    .reflection-prompt { background: var(--white); border-radius: 12px; padding: 2rem 2.25rem; }
+    .reflection-prompt label { display: block; font-weight: 600; font-size: 1.05rem; color: var(--near-black); margin-bottom: 0.4rem; }
+    .reflection-prompt .hint { font-size: 0.92rem; color: var(--ink-soft); margin-bottom: 0.75rem; line-height: 1.6; }
+    .reflection-prompt textarea { width: 100%; min-height: 130px; padding: 1rem 1.25rem; font: 400 1rem/1.7 'DM Sans', sans-serif; color: var(--near-black); background: var(--cream); border: 1.5px solid var(--field-line); border-radius: 6px; resize: vertical; }
+    .note-status { font-size: 0.85rem; color: var(--ink-soft); min-height: 1.4em; margin-top: 0.35rem; }
+    .scaffold-toggle { margin-top: 1rem; }
+    .scaffold-toggle summary { display: inline-flex; align-items: center; gap: 0.5rem; min-height: 44px; font-size: 0.92rem; font-weight: 600; color: var(--moss-deep); cursor: pointer; list-style: none; }
+    .scaffold-toggle summary::-webkit-details-marker { display: none; }
+    .scaffold-toggle summary::before { content: '+'; font-weight: 700; color: var(--moss-deep); width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; border: 1.5px solid var(--moss); border-radius: 50%; }
+    .scaffold-toggle[open] summary::before { content: '\2212'; }
+    .scaffold-content { margin-top: 0.5rem; padding: 1rem 1.25rem; background: var(--sage-pale); border-radius: 6px; font-size: 1rem; line-height: 1.75; color: var(--ink-green); }
+    .scaffold-content .model { font-family: 'Playfair Display', Georgia, serif; font-style: italic; font-size: 1.1rem; color: var(--near-black); margin-bottom: 0.5rem; }
+
+    /* transition card */
+    .transition-card { padding: 3rem; background: var(--forest); }
+    .transition-card p { font-size: 1.1rem; line-height: 1.8; color: var(--on-dark); font-style: italic; font-family: 'Playfair Display', Georgia, serif; }
+    .transition-card-line { width: 40px; height: 3px; background: var(--clay); margin-bottom: 1.5rem; }
+
+    /* opener: a question to connect the idea to the learner's own experience */
+    .opener { background: var(--sand); padding: 3rem; }
+    .opener-label { font-size: 0.8rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--clay-ink); margin-bottom: 0.6rem; }
+    .opener-q { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(1.35rem, 3vw, 1.75rem); line-height: 1.45; color: var(--forest); margin-bottom: 0.75rem; }
+    .opener-card p.opener-hint { font-size: 1rem; line-height: 1.75; color: var(--ink-warm); }
+
+    .contrast-block .example-list li { background: var(--white); }
+
+    /* "In the reading": the wetlands unit, tied to each section's idea */
+    .reading-note { background: var(--sage-pale); border-left: 6px solid var(--moss-deep); border-radius: 0 12px 12px 0; padding: 1.25rem 1.5rem; margin: 1.5rem 0 1rem; }
+    .reading-note-label, .content-block .reading-note .reading-note-label { font-size: 0.8rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--moss-deep); }
+    .content-block .reading-note p { color: var(--ink-green); margin-bottom: 0.4rem; }
+    .content-block .reading-note p:last-child { margin-bottom: 0; }
+
+    /* three-way contrast (critical hope) */
+    .q-trio { list-style: none; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 1.25rem 0; }
+    .q-trio li { background: var(--white); border-radius: 10px; padding: 1.1rem 1.25rem; font-size: 1rem; line-height: 1.6; color: var(--near-black); border: 1px solid rgba(74,103,65,0.15); }
+    .q-trio .q-k { display: block; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 0.3rem; }
+    .q-trio li.is-better { border: 2px solid var(--moss-deep); }
+    .q-trio li.is-better .q-k { color: var(--moss-deep); }
+
+    /* the learner's gut-check answer from the intro, shown again in Section 4 */
+    .recall { background: var(--white); border-left: 4px solid var(--clay); border-radius: 0 10px 10px 0; padding: 1rem 1.25rem; margin-bottom: 1.25rem; font-size: 1rem; line-height: 1.7; color: var(--near-black); }
+
+    @media (max-width: 768px) {
+      .section-header { padding: 5rem 1.5rem 2rem; }
+      .section-header-row { flex-wrap: wrap; gap: 0.5rem 1rem; }
+      .sh-number { font-size: 4.5rem; }
+      .sh-time { flex-shrink: 1; flex-basis: 100%; }
+      .opener, .content-block, .predict-block, .check-block, .definition-card, .concept-grid-section, .contrast-block, .reading-block, .reflection-block, .transition-card, .begin-section { padding-left: 1.5rem; padding-right: 1.5rem; }
+      .concept-grid, .concept-grid.three, .q-pair, .q-trio { grid-template-columns: 1fr; }
+      .sides-list li { grid-template-columns: 1fr; gap: 0.3rem; padding: 0.9rem 1.25rem; }
+      .reflection-prompt { padding: 1.5rem; }
+      .begin-action { align-items: flex-start; }
+    }
+
+
+  </style>
+<script>
+/* ============================================================
+   EDCI 487 · shared behaviour (inline so each page works on its own)
+   ============================================================ */
+(function () {
+  var NS = 'reflection-to-action';
+  var root = document.documentElement;
+  function get(k, d) { try { var v = localStorage.getItem(NS + ':' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } }
+  function set(k, v) { try { localStorage.setItem(NS + ':' + k, JSON.stringify(v)); return true; } catch (e) { return false; } }
+
+  /* Display preferences (UDL) */
+  var prefs = get('prefs', { large: false, calm: false, dyslexia: false });
+  /* Dyslexia-friendly font: Lexend, loaded only when the option is on */
+  function loadDysFont() {
+    if (document.getElementById('dys-font')) return;
+    var l = document.createElement('link');
+    l.id = 'dys-font'; l.rel = 'stylesheet';
+    l.href = 'https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700&display=swap';
+    document.head.appendChild(l);
+  }
+  if (prefs.dyslexia) loadDysFont();
+  root.classList.toggle('pref-dyslexia', !!prefs.dyslexia);
+  root.classList.toggle('pref-large', !!prefs.large);
+  root.classList.toggle('pref-calm', !!prefs.calm);
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!reduce && !prefs.calm && 'IntersectionObserver' in window) root.classList.add('js-reveal');
+
+  document.addEventListener('DOMContentLoaded', function () {
+    var page = document.body.getAttribute('data-page');          // "intro" | "1".."4"
+
+    /* --- Sidebar --- */
+    var toggle = document.querySelector('.sidebar-toggle');
+    var sidebar = document.getElementById('sidebar');
+    var overlay = document.querySelector('.sidebar-overlay');
+    function setOpen(open, back) {
+      sidebar.classList.toggle('open', open);
+      overlay.classList.toggle('visible', open);
+      toggle.setAttribute('aria-expanded', String(open));
+      toggle.setAttribute('aria-label', open ? 'Close module menu' : 'Open module menu');
+      if (open) { sidebar.removeAttribute('inert'); var f = sidebar.querySelector('a,button'); if (f) f.focus(); }
+      else { sidebar.setAttribute('inert', ''); if (back) toggle.focus(); }
+    }
+    sidebar.setAttribute('inert', '');
+    toggle.addEventListener('click', function () { setOpen(!sidebar.classList.contains('open')); });
+    overlay.addEventListener('click', function () { setOpen(false, true); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && sidebar.classList.contains('open')) setOpen(false, true); });
+    /* A11Y (WCAG 2.4.11): close when Tab leaves the menu, so focus never lands behind the overlay */
+    sidebar.addEventListener('focusout', function (e) {
+      var to = e.relatedTarget;
+      if (sidebar.classList.contains('open') && to && to !== toggle && !sidebar.contains(to)) setOpen(false);
+    });
+
+    /* --- Display option buttons --- */
+    document.querySelectorAll('.pref-btn').forEach(function (b) {
+      var k = b.getAttribute('data-pref');
+      b.setAttribute('aria-pressed', String(!!prefs[k]));
+      b.querySelector('.state').textContent = prefs[k] ? 'On' : 'Off';
+      b.addEventListener('click', function () {
+        prefs[k] = !prefs[k]; set('prefs', prefs);
+        b.setAttribute('aria-pressed', String(prefs[k]));
+        b.querySelector('.state').textContent = prefs[k] ? 'On' : 'Off';
+        root.classList.toggle('pref-' + k, prefs[k]);
+        if (k === 'calm' && prefs.calm) { root.classList.remove('js-reveal'); }
+        if (k === 'dyslexia' && prefs.dyslexia) { loadDysFont(); }
+      });
+    });
+
+    /* --- Progress: sidebar checkmarks (+ tracker, if a page has one) --- */
+    var done = get('done', {});
+    function paint() {
+      document.querySelectorAll('.nav-item[data-key]').forEach(function (a) {
+        var on = !!done[a.getAttribute('data-key')];
+        a.classList.toggle('is-done', on);
+        a.querySelector('.nav-check').textContent = on ? '\u2713' : '';
+        var sr = a.querySelector('.done-sr'); if (sr) sr.textContent = on ? ' (completed)' : '';
+      });
+      document.querySelectorAll('.tracker li[data-line]').forEach(function (li) {
+        var n = li.getAttribute('data-line'), on = !!done[n];
+        li.classList.toggle('is-done', on);
+        li.classList.toggle('is-current', n === page);
+        li.querySelector('.dot').textContent = on ? '\u2713' : '';
+        li.querySelector('.state').textContent = on ? 'done' : (n === page ? 'you are here' : 'not started');
+      });
+    }
+    paint();
+    var end = document.getElementById('page-end');
+    if (end && 'IntersectionObserver' in window) {
+      var io = new IntersectionObserver(function (es) {
+        if (es.some(function (e) { return e.isIntersecting; })) { done[page] = true; set('done', done); paint(); io.disconnect(); }
+      }, { threshold: 0.3 });
+      io.observe(end);
+    }
+
+    /* --- Scroll progress bar + reveal --- */
+    var bar = document.getElementById('progress-bar');
+    if (bar) window.addEventListener('scroll', function () {
+      var d = document.documentElement, m = d.scrollHeight - d.clientHeight;
+      bar.style.transform = 'scaleX(' + (m > 0 ? Math.min(d.scrollTop / m, 1) : 1) + ')';
+    }, { passive: true });
+    if (root.classList.contains('js-reveal')) {
+      var ro = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('visible'); ro.unobserve(e.target); } }); }, { threshold: 0.06 });
+      document.querySelectorAll('.reveal').forEach(function (el) { ro.observe(el); });
+      document.addEventListener('focusin', function (e) { var r = e.target.closest && e.target.closest('.reveal'); if (r) r.classList.add('visible'); });
+    }
+
+    /* --- Choice activities: feedback written for every option --- */
+    document.querySelectorAll('[data-check]').forEach(function (box) {
+      var out = box.querySelector('.feedback'), btn = box.querySelector('.btn-check'), store = box.getAttribute('data-store');
+      function run() {
+        var p = box.querySelector('input[type=radio]:checked');
+        out.classList.remove('is-nudge');
+        if (!p) { out.classList.add('is-nudge'); out.innerHTML = '<span class="verdict">Choose an option first.</span>'; return; }
+        if (store) set(store, p.value);
+        var v = p.getAttribute('data-verdict');
+        var label = v === 'match' ? (box.getAttribute('data-match') || 'That matches the thinking here.') : v === 'nudge' ? 'Worth another look.' : '';
+        if (v === 'nudge') out.classList.add('is-nudge');
+        out.innerHTML = (label ? '<span class="verdict">' + label + '</span>' : '') + p.getAttribute('data-feedback');
+      }
+      if (store) { var prev = get(store, null); if (prev) { var r = box.querySelector('input[value="' + prev + '"]'); if (r) r.checked = true; } }
+      if (btn) btn.addEventListener('click', run);
+      else box.querySelectorAll('input[type=radio]').forEach(function (r) { r.addEventListener('change', run); });
+    });
+
+    /* --- Notes: saved on this device only, downloadable --- */
+    document.querySelectorAll('textarea[data-note]').forEach(function (ta) {
+      var key = 'note:' + ta.getAttribute('data-note'), st = document.getElementById(ta.id + '-status'), t;
+      ta.value = get(key, '');
+      ta.addEventListener('input', function () {
+        clearTimeout(t);
+        t = setTimeout(function () {
+          var ok = set(key, ta.value);
+          if (st) st.textContent = ok ? 'Saved on this device.' : 'Not saved: your browser is blocking storage. Download your note before leaving.';
+        }, 600);
+      });
+    });
+    document.querySelectorAll('[data-download]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var ta = document.getElementById(b.getAttribute('data-download'));
+        var lab = document.querySelector('label[for="' + ta.id + '"]');
+        var blob = new Blob([(lab ? lab.textContent.trim() : 'My note') + '\n\n' + ta.value], { type: 'text/plain' });
+        var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = ta.id + '.txt';
+        document.body.appendChild(a); a.click(); a.remove(); setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+      });
+    });
+  });
+})();
+</script>
+
+</head>
+<body data-page="3">
+<div id="progress-bar" aria-hidden="true"></div>
+<a class="skip-link" href="#main">Skip to main content</a>
+<button class="sidebar-toggle" type="button" aria-expanded="false" aria-controls="sidebar" aria-label="Open module menu">
+  <span class="bar" aria-hidden="true"></span><span class="bar" aria-hidden="true"></span><span class="bar" aria-hidden="true"></span>
+</button>
+<div class="sidebar-overlay" aria-hidden="true"></div>
+<aside class="sidebar" id="sidebar" aria-label="Module menu">
+  <p class="sidebar-logo">EDCI 487<br>Climate Change Education<span class="module-name">From Reflection to Action</span></p>
+  <nav class="sidebar-nav" aria-label="Module sections">
+    <ol>
+      <li><a class="nav-item" data-key="intro" href="index.html"><span class="nav-num" aria-hidden="true">&uarr;</span><span class="nav-label">Intro &amp; Overview<span class="sr-only done-sr"></span></span><span class="nav-check" aria-hidden="true"></span></a></li>
+      <li><a class="nav-item" data-key="1" href="section1.html"><span class="nav-num" aria-hidden="true">01</span><span class="nav-label">Transmission or Transformation<span class="sr-only done-sr"></span></span><span class="nav-time"><span class="sr-only">, about </span>3 min</span><span class="nav-check" aria-hidden="true"></span></a></li>
+      <li><a class="nav-item" data-key="2" href="section2.html"><span class="nav-num" aria-hidden="true">02</span><span class="nav-label">Praxis: Reflection and Action<span class="sr-only done-sr"></span></span><span class="nav-time"><span class="sr-only">, about </span>3 min</span><span class="nav-check" aria-hidden="true"></span></a></li>
+      <li><a class="nav-item" data-key="3" href="section3.html" aria-current="page"><span class="nav-num" aria-hidden="true">03</span><span class="nav-label">Integrating the Curriculum<span class="sr-only done-sr"></span></span><span class="nav-time"><span class="sr-only">, about </span>4 min</span><span class="nav-check" aria-hidden="true"></span></a></li>
+      <li><a class="nav-item" data-key="4" href="section4.html"><span class="nav-num" aria-hidden="true">04</span><span class="nav-label">Critical Hope<span class="sr-only done-sr"></span></span><span class="nav-time"><span class="sr-only">, about </span>3 min</span><span class="nav-check" aria-hidden="true"></span></a></li>
+    </ol>
+  </nav>
+  <section class="display-options" aria-labelledby="display-h">
+    <h2 id="display-h">Display options</h2>
+    <button type="button" class="pref-btn" data-pref="large" aria-pressed="false"><span>Larger text</span><span class="state" aria-hidden="true">Off</span></button>
+    <button type="button" class="pref-btn" data-pref="dyslexia" aria-pressed="false"><span>Dyslexia-friendly font</span><span class="state" aria-hidden="true">Off</span></button>
+    <button type="button" class="pref-btn" data-pref="calm" aria-pressed="false"><span>Calm mode (no motion)</span><span class="state" aria-hidden="true">Off</span></button>
+  </section>
+</aside>
+
+<main id="main" class="page-layout" tabindex="-1">
+
+<header class="section-header on-dark">
+  <div class="block-inner section-header-row">
+    <span class="sh-number" data-n="03" aria-hidden="true"></span>
+    <div class="sh-center">
+      <p class="sh-label">Section 3 of 4</p>
+      <h1 class="sh-title">Integrating the Curriculum</h1>
+    </div>
+    <p class="sh-time">About 4 minutes</p>
+  </div>
+</header>
+
+<!-- OPENER -->
+<section class="opener reveal" aria-labelledby="opener-h">
+  <div class="block-inner"><div class="opener-card">
+    <h2 class="opener-label" id="opener-h">Start here</h2>
+    <p class="opener-q">Is climate change a science topic? If you said yes, which other subjects would you add?</p>
+    <p class="opener-hint">Climate change reaches well beyond science. It touches health, the economy, politics, and the way communities live.</p>
+  </div></div>
+</section>
+
+<!-- 1. THE STORY -->
+<section class="contrast-block reveal" aria-labelledby="case-h">
+  <div class="block-inner">
+    <h2 class="cb-heading" id="case-h">Nataly&rsquo;s wetlands unit</h2>
+    <ul class="fact-chips" aria-label="Unit at a glance">
+      <li>Coronel, Chile</li>
+      <li>Grades 5 and 6</li>
+      <li>7 weeks</li>
+      <li>3 teachers: arts, English, science</li>
+    </ul>
+    <p>Nataly Basti&aacute;s&rsquo;s school stands on local wetlands, but wetlands weren&rsquo;t in the official curriculum at all (p. 35). Here is how the unit worked (pp. 34&ndash;35).</p>
+    <ol class="concept-grid three case-steps">
+      <li class="concept-grid-card">
+        <span class="card-num" aria-hidden="true">1</span>
+        <h3 class="card-title">Problem first</h3>
+        <p class="card-body">The teachers planned around one question: &ldquo;what can each discipline contribute to address the topic?&rdquo;</p>
+      </li>
+      <li class="concept-grid-card">
+        <span class="card-num" aria-hidden="true">2</span>
+        <h3 class="card-title">Learn alongside students</h3>
+        <p class="card-body">They invited a wetlands specialist from a local university and an activist from a local women&rsquo;s group.</p>
+      </li>
+      <li class="concept-grid-card">
+        <span class="card-num" aria-hidden="true">3</span>
+        <h3 class="card-title">Act for the community</h3>
+        <p class="card-body">Students made a fanzine to tell their community about the local wetlands.</p>
+      </li>
+    </ol>
+    <p class="takeaway">The problem came first. The subjects came second.</p>
+  </div>
+</section>
+
+<!-- 2. WHY ONE SUBJECT WASN'T ENOUGH -->
+<section class="concept-grid-section on-white reveal" aria-labelledby="dims-h">
+  <div class="block-inner">
+    <h2 class="block-heading" id="dims-h">Why science alone couldn&rsquo;t hold it</h2>
+    <p class="predict-intro">The unit opened up questions of water access, power, and property (p. 36), well beyond science. Here is one wetlands question for each of five sides of climate change. Did the subjects you thought of at the start cover all five?</p>
+    <ul class="sides-list">
+      <li><span class="side-k">Scientific</span><span>What lives in the wetland, and how does it store water and carbon?</span></li>
+      <li><span class="side-k">Social</span><span>Who lives near the wetland, and who depends on it?</span></li>
+      <li><span class="side-k">Ethical</span><span>What do we owe the wetland and the people and species that rely on it?</span></li>
+      <li><span class="side-k">Cultural</span><span>What does the wetland mean to the different communities around it?</span></li>
+      <li><span class="side-k">Political</span><span>Who owns the land and the water, and who decides what happens to it?</span></li>
+    </ul>
+  </div>
+</section>
+
+<!-- 3. NAME IT -->
+<section class="definition-card reveal" aria-labelledby="ci-h">
+  <div class="block-inner">
+    <h2 class="definition-card-heading" id="ci-h">The name for this: curriculum integration</h2>
+    <p class="definition-card-body">A curriculum organized around significant problems that teachers and students choose together, without regard for subject boundaries. The definition comes from the curriculum scholar James Beane (p. 28). Nataly&rsquo;s unit is one example.</p>
+  </div>
+</section>
+
+<!-- 4. SHARPEN IT -->
+<section class="content-block reveal" aria-labelledby="not-h">
+  <div class="block-inner"><div class="prose">
+    <h2 class="block-heading" id="not-h">Integrated is not the same as &ldquo;several subjects&rdquo;</h2>
+    <p>Putting several subjects in one unit doesn&rsquo;t make it integrated. Beane separates integration from <strong>multidisciplinary</strong> units, where each subject takes a turn with a theme but stays separate (p. 28).</p>
+    <ul class="q-pair">
+      <li><span class="q-k">Multidisciplinary</span>A theme is shared out. Each subject teaches its own piece of it, and the pieces don&rsquo;t need each other.</li>
+      <li class="is-better"><span class="q-k">Integrated</span>A real problem comes first. Each subject is a tool for understanding it, as in the wetlands unit.</li>
+    </ul>
+    <p>Salinas et al. add a caution: mixing subjects can also serve narrow goals. They point to STEM programs in the United States shaped mainly by workforce and economic aims, which leave out social and political questions (p. 30).</p>
+    <p class="source-note">Sources: Salinas et al. (2023), pp. 28, 30, 34&ndash;36.</p>
+  </div></div>
+</section>
+
+<!-- QUIZ -->
+<section class="predict-block check-block reveal" aria-labelledby="quiz-h">
+  <div class="block-inner"><div class="prose">
+    <h2 class="block-heading" id="quiz-h">Quick quiz</h2>
+    <p class="predict-intro">You&rsquo;ll get feedback as soon as you choose.</p>
+    <div data-check data-match="Yes, that&rsquo;s curriculum integration.">
+      <fieldset class="choice-set">
+        <legend>Which unit is integrated, in Beane&rsquo;s sense?</legend>
+        <label class="choice"><input type="radio" name="q3" value="a" data-verdict="nudge" data-feedback="Each subject takes a turn with the theme but stays separate, and no shared problem holds the unit together. Beane calls this multidisciplinary."><span>&ldquo;Water week&rdquo;: science studies the water cycle, English writes rain poems, and math graphs rainfall.</span></label>
+        <label class="choice"><input type="radio" name="q3" value="b" data-verdict="match" data-feedback="The problem is local and chosen with students, each subject helps understand it, and the work goes back to the community."><span>Students and teachers choose a local problem: a creek near the school that floods every spring. Each subject helps them understand it, and they present their findings to the city.</span></label>
+        <label class="choice"><input type="radio" name="q3" value="c" data-verdict="nudge" data-feedback="It mixes subjects, but the problem is set for students, and nobody asks who has clean water or who decides. Salinas et al. warn about this kind of integration (p. 30)."><span>A STEM challenge: teams design a water filter to win a contest run by a technology company.</span></label>
+      </fieldset>
+      <div class="feedback" role="status" aria-live="polite"></div>
+    </div>
+  </div></div>
+</section>
+
+<!-- BRIDGE -->
+<section class="transition-card on-dark reveal">
+  <div class="block-inner">
+    <div class="transition-card-line" aria-hidden="true"></div>
+    <p>Seeing all five sides of a problem can feel heavy. How do we end a lesson so students feel able to act, without pretending the problem is small?</p>
+  </div>
+</section>
+
+<section class="begin-section" id="page-end" aria-labelledby="next-h">
+  <div class="begin-row">
+    <div class="begin-text">
+      <h2 class="begin-heading" id="next-h">Ready to continue?</h2>
+      <p class="begin-sub">Last, you&rsquo;ll look at how to end a climate lesson with hope.</p>
+      <p class="back-link"><a href="section2.html">Back to Section 2</a></p>
+    </div>
+    <div class="begin-action">
+      <a class="btn-begin" href="section4.html">Section 4 <span class="arrow" aria-hidden="true"></span></a>
+      <span class="time-note">Next: Critical Hope &middot; 3 min</span>
+    </div>
+  </div>
+</section>
+
+</main>
+<footer class="site-footer on-dark">
+  <p>EDCI 487 &middot; Climate Change Education &middot; University of Victoria. Need this module in another format? Contact your instructor through Brightspace.</p>
+</footer>
+
+</body>
+</html>
